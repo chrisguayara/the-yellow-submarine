@@ -603,7 +603,7 @@ float sinwave_laser(vec4 position) {
 The assignment is somewhat ambiguious. You may find that you need to change, modify, or add things to the game's codebase not mentioned in the description or marked by a TODO to get things working. You're more than welcome to do so. 
 
 ## Submission
-Note that you <strong><em>must</em></strong> setup a Git repo and use it for your project <strong><em>throughout</em></strong> your development process. This is important. When your work is completed, you will need to  Whatever you do, just don't submit the `node_modules`.
+Note that you <strong><em>must</em></strong> setup a Git repo and use it for your project <strong><em>throughout</em></strong> your development process.
 
 
 
