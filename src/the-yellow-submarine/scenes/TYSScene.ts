@@ -162,6 +162,8 @@ export default class TYSScene extends Scene {
 		this.receiver.subscribe(TYSEvents.CHARGE_CHANGE);
 		this.receiver.subscribe(TYSEvents.SHOOT_LASER);
 		this.receiver.subscribe(TYSEvents.DEAD);
+		this.receiver.subscribe(TYSEvents.HEALTH_CHANGE);
+		this.receiver.subscribe(TYSEvents.AIR_CHANGE);
 
 		// Subscribe to laser events
 		this.receiver.subscribe(TYSEvents.FIRING_LASER);
@@ -229,6 +231,13 @@ export default class TYSScene extends Scene {
 			case TYSEvents.FIRING_LASER: {
 				this.minesDestroyed += this.handleMineLaserCollisions(event.data.get("laser"), this.mines);
 				break;
+			}
+			case TYSEvents.HEALTH_CHANGE: {
+				this.handleHealthChange(event.data.get("currHealth"),event.data.get("maxHealth"));
+				break;
+			}
+			case TYSEvents.AIR_CHANGE: {
+				this.handleAirChange(event.data.get("currAir"), event.data.get("maxAir"));
 			}
 			default: {
 				throw new Error(`Unhandled event with type ${event.type} caught in ${this.constructor.name}`);

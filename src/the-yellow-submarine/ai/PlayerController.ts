@@ -28,6 +28,7 @@ export default class PlayerController implements AI {
     private currentHealth: number;
     private maxHealth: number;
     private minHealth: number;
+	private previousHealth: number;
 
     private currentAir: number;
     private maxAir: number;
@@ -71,6 +72,7 @@ export default class PlayerController implements AI {
         // Set upper and lower bounds on the player's health
         this.minHealth = 0;
         this.maxHealth = 10;
+		this.previousHealth = this.currentHealth;
 
         // Set the player's current air
         this.currentAir = 20;
@@ -117,8 +119,14 @@ export default class PlayerController implements AI {
         // If the player is out of hp - play the death animation
 		if (this.currentHealth <= this.minHealth) { 
             this.emitter.fireEvent(TYSEvents.DEAD);
+			this.owner.animation.play(PlayerAnimations.DEATH)
             return;
         }
+		if (this.currentHealth < this.previousHealth){
+			if (!this.owner.animation.isPlaying(PlayerAnimations.HIT)) {
+				this.owner.animation.play(PlayerAnimations.HIT);
+			}
+		}
 
 		// Get the player's input direction 
 		let forwardAxis = (Input.isPressed(TYSControls.MOVE_UP) ? 1 : 0) + (Input.isPressed(TYSControls.MOVE_DOWN) ? -1 : 0);
@@ -138,8 +146,18 @@ export default class PlayerController implements AI {
 		// Player looses a little bit of air each frame
 		this.currentAir = MathUtils.clamp(this.currentAir - deltaT, this.minAir, this.maxAir);
 
+		this.emitter.fireEvent(TYSEvents.AIR_CHANGE, {currAir: this.currentAir, maxAir: this.maxAir});
+
 		// If the player is out of air - start subtracting from the player's health
 		this.currentHealth = this.currentAir <= this.minAir ? MathUtils.clamp(this.currentHealth - deltaT*2, this.minHealth, this.maxHealth) : this.currentHealth;
+		
+		
+		if (this.currentHealth < this.previousHealth) {
+			this.emitter.fireEvent(TYSEvents.HEALTH_CHANGE, {currHealth: this.currentHealth, maxHealth: this.maxHealth})
+		}
+		this.previousHealth = this.currentHealth;
+		
+
 	}
 	/**
 	 * This method handles all events that the reciever for the PlayerController is
@@ -155,6 +173,7 @@ export default class PlayerController implements AI {
 				this.handleShootLaserEvent(event);
 				break;
 			}
+			
 			default: {
 				throw new Error(`Unhandled event of type: ${event.type} caught in PlayerController`);
 			}
