@@ -235,8 +235,8 @@ export default class PlayerController implements AI {
 
 	}
 	protected handleBubbleCollision(event : GameEvent) : void{
-		MathUtils.clamp(this.currentAir+1, this.minAir, this.maxAir);
-		this.emitter.fireEvent(TYSEvents.HEALTH_CHANGE, {
+		this.currentAir = MathUtils.clamp(this.currentAir+1, this.minAir, this.maxAir);
+		this.emitter.fireEvent(TYSEvents.AIR_CHANGE, {
 			currAir: this.currentAir, maxAir: this.maxAir
 		}); 
 	}

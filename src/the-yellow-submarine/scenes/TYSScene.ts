@@ -194,6 +194,8 @@ export default class TYSScene extends Scene {
 		// Handle screen despawning of mines and bubbles
 		for (let mine of this.mines) if (mine.visible) this.handleScreenDespawn(mine);
 		for (let bubble of this.bubbles) if (bubble.visible) this.handleScreenDespawn(bubble);
+
+		this.wrapPlayer(this.player, this.viewport.getCenter(), this.viewport.getHalfSize());
 	}
     /**
      * @see Scene.unloadScene()
@@ -544,6 +546,7 @@ export default class TYSScene extends Scene {
 	 * 							X THIS IS OUT OF BOUNDS
 	 */
 	protected spawnBubble(): void {
+		if (!this.bubbles || this.bubbles.length === 0) return;
 		
 		for (let i = 0; i < this.bubbles.length; i++) {
 			let bubble = this.bubbles[i];
@@ -611,7 +614,18 @@ export default class TYSScene extends Scene {
 	 * It may be helpful to make your own drawings while figuring out the math for this part.
 	 */
 	public handleScreenDespawn(node: CanvasNode): void {
-        // TODO - despawn the game nodes when they move out of the padded viewport
+        const viewportCenter = this.viewport.getCenter();
+		const viewportHalfSize = this.viewport.getHalfSize();
+		const paddedSize = viewportHalfSize.clone().add(this.worldPadding);
+
+		const minX = viewportCenter.x - paddedSize.x;
+		const maxX = viewportCenter.x + paddedSize.x;
+		const minY = viewportCenter.y - paddedSize.y;
+		const maxY = viewportCenter.y + paddedSize.y;
+
+		if (node.position.x < minX || node.position.x > maxX || node.position.y < minY || node.position.y > maxY) {
+			node.visible = false;
+		}
 	}
 
 	/** Methods for updating the UI */
@@ -845,22 +859,19 @@ export default class TYSScene extends Scene {
 	 * @see MathUtils for more information about MathUtil functions
 	 */
 	public static checkAABBtoCircleCollision(aabb: AABB, circle: Circle): boolean {
-        const circleCenter = circle.center;
-		const aabbCenter = aabb.center;
+        // const circleCenter = circle.center;
+		// const aabbCenter = aabb.center;
 
-		const halfWidth = aabb.halfSize.x;
-		const halfHeight = aabb.halfSize.y;
+		// const halfWidth = aabb.halfSize.x;
+		// const halfHeight = aabb.halfSize.y;
 
-		const x = MathUtils.clamp(circle.x, aabbCenter.x - halfWidth, aabbCenter.x + halfWidth)
-		const y = MathUtils.clamp(circle.y, aabbCenter.y - halfHeight, aabbCenter.y + halfHeight);
+		// const x = MathUtils.clamp(circle.x, aabbCenter.x - halfWidth, aabbCenter.x + halfWidth)
+		// const y = MathUtils.clamp(circle.y, aabbCenter.y - halfHeight, aabbCenter.y + halfHeight);
 
-		const dx = circleCenter.x - x;
-		const dy = circleCenter.y - y;
+		// const dx = circleCenter.x - x;
+		// const dy = circleCenter.y - y;
 
-		
-
-
-        return (dx * dy + dx * dy ) <= (circle.radius * circle.radius);
+        // return (dx * dx + dy * dy ) <= (circle.radius * circle.radius);
 	}
 
     /** Methods for locking and wrapping nodes */
@@ -910,7 +921,22 @@ export default class TYSScene extends Scene {
 	 * 							X THIS IS OUT OF BOUNDS													
 	 */
 	protected wrapPlayer(player: CanvasNode, viewportCenter: Vec2, viewportHalfSize: Vec2): void {
-		// TODO wrap the player around the top/bottom of the screen
+		
+		const viewMinY = viewportCenter.y - viewportHalfSize.y;
+		
+		const viewMaxY = viewportCenter.y + viewportHalfSize.y;
+		
+		
+		if (player.position.y > viewMaxY) {
+			console.log("Wrapping BELOW")
+       	 	player.position.y = viewMinY;
+    	}
+		else if (player.position.y < viewMinY){
+			console.log("Wrapping ABOVE")
+			player.position.y = viewMaxY;
+		}
+		
+
 	}
 
     /**
