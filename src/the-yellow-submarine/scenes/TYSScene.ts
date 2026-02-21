@@ -801,11 +801,17 @@ export default class TYSScene extends Scene {
 		// TODO check for collisions between the player and the bubbles
 		let collisions = 0
 		for( let bubble of this.bubbles) {
-			if(bubble.visible && TYSScene.checkAABBtoCircleCollision(this.player.collisionShape as AABB,bubble.collisionShape as Circle)){
-				bubble.visible = false;
-				this.emitter.fireEvent(TYSEvents.PLAYER_BUBBLE_COLLISION)
-				collisions++;
-			}
+			let collides = TYSScene.checkAABBtoCircleCollision(
+                this.player.collisionShape as AABB,
+                bubble.collisionShape as Circle
+            );
+        
+            if(collides){
+                
+                bubble.visible = false;
+                this.emitter.fireEvent(TYSEvents.PLAYER_BUBBLE_COLLISION)
+                collisions++;
+            }
 		}
         return collisions;
 	}
@@ -886,13 +892,15 @@ export default class TYSScene extends Scene {
 		// const halfWidth = aabb.halfSize.x;
 		// const halfHeight = aabb.halfSize.y;
 
-		// const x = MathUtils.clamp(circle.x, aabbCenter.x - halfWidth, aabbCenter.x + halfWidth)
-		// const y = MathUtils.clamp(circle.y, aabbCenter.y - halfHeight, aabbCenter.y + halfHeight);
+		// const closex = MathUtils.clamp(circle.x, aabbCenter.x - halfWidth, aabbCenter.x + halfWidth)
+		// const closey = MathUtils.clamp(circle.y, aabbCenter.y - halfHeight, aabbCenter.y + halfHeight);
 
-		// const dx = circleCenter.x - x;
-		// const dy = circleCenter.y - y;
+		// const dx = circleCenter.x - closex;
+		// const dy = circleCenter.y - closey;
 
         // return (dx * dx + dy * dy ) <= (circle.radius * circle.radius);
+
+		return true;
 	}
 
     /** Methods for locking and wrapping nodes */
@@ -1030,7 +1038,7 @@ export default class TYSScene extends Scene {
 				
 				this.emitter.fireEvent(GameEventType.PLAY_RECORDING, {
 					onEnd:() => {
-						this.sceneManager.changeToScene(MainMenu, {}, {})
+						this.sceneManager.changeToScene(MainMenu, {}, {});
 					}
 				});
 			}
