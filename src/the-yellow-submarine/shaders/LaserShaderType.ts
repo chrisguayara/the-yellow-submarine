@@ -25,6 +25,18 @@ export default class LaserShaderType extends RectShaderType {
 
 		// Let WebGL know we're using our shader program
 		gl.useProgram(program);
+		if (options.color) {
+				const u_Color = gl.getUniformLocation(program, "u_Color");
+				
+				gl.uniform4f(
+					u_Color, 
+					options.color.r / 255, 
+					options.color.g / 255, 
+					options.color.b / 255, 
+					options.color.a / 255
+				);
+				
+		}
 
 		// Get our vertex data
 		const vertexData = this.getVertices(options.size.x, options.size.y);
@@ -72,6 +84,7 @@ export default class LaserShaderType extends RectShaderType {
 			position: gc.position,
 			size: gc.size,
 			rotation: gc.rotation,
+			color: gc.color
 		}
 		return options;
 	}

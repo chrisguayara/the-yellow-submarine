@@ -27,6 +27,7 @@ import BubbleShaderType from "../shaders/BubbleShaderType";
 import LaserShaderType from "../shaders/LaserShaderType";
 import Homework1_Scene from "./TYSScene";
 import { TYSEvents } from "../TYSEvents";
+import MainMenu from "./MainMenu";
 
 /**
  * A type for layers in the scene. It seems natural to want to use some kind of enum type to
@@ -104,6 +105,9 @@ export default class TYSScene extends Scene {
 	// The padding of the world
 	private worldPadding: Vec2;
 
+	//basicRecording obj
+	private tape : BasicRecording;
+
 	/** Scene lifecycle methods */
 
 	/**
@@ -112,6 +116,15 @@ export default class TYSScene extends Scene {
 	public override initScene(options: Record<string, any>): void {
 		this.seed = options.seed === undefined ? RandUtils.randomSeed() : options.seed;
         this.recording = options.recording === undefined ? false : options.recording; 
+
+		RandUtils.seed = this.seed
+
+		if (this.recording){
+			this.tape = new BasicRecording(TYSScene, {
+				seed : this.seed,
+				recording : true
+			});
+		}
 	}
 	/**
 	 * @see Scene.loadScene()
@@ -168,6 +181,11 @@ export default class TYSScene extends Scene {
 
 		// Subscribe to laser events
 		this.receiver.subscribe(TYSEvents.FIRING_LASER);
+		if (this.recording && this.tape){
+			this.emitter.fireEvent(GameEventType.START_RECORDING, {
+				recording: this.tape
+			})
+		}
 	}
 	/**
 	 * @see Scene.updateScene 
@@ -196,6 +214,7 @@ export default class TYSScene extends Scene {
 		for (let bubble of this.bubbles) if (bubble.visible) this.handleScreenDespawn(bubble);
 
 		this.wrapPlayer(this.player, this.viewport.getCenter(), this.viewport.getHalfSize());
+		this.lockPlayer(this.player, this.viewport.getCenter(), this.viewport.getHalfSize());
 	}
     /**
      * @see Scene.unloadScene()
@@ -224,7 +243,9 @@ export default class TYSScene extends Scene {
 				break;
 			}
 			case TYSEvents.DEAD: {
+				console.log("TIMER OF DEATH STARTED")
 				this.gameOverTimer.start();
+				this.emitter.fireEvent(GameEventType.STOP_RECORDING, {})
 				break;
 			}
 			case TYSEvents.CHARGE_CHANGE: {
@@ -349,7 +370,7 @@ export default class TYSScene extends Scene {
 		this.bubbleSpawnTimer = new Timer(2500);
 		this.bubbleSpawnTimer.start();
 
-		this.gameOverTimer = new Timer(3000);
+		this.gameOverTimer = new Timer(1500);
 	}
 	/**
 	 * Initializes the background image sprites for the game.
@@ -979,7 +1000,19 @@ export default class TYSScene extends Scene {
 	 * 
 	 */
 	protected lockPlayer(player: CanvasNode, viewportCenter: Vec2, viewportHalfSize: Vec2): void {
-		// TODO prevent the player from moving off the left/right side of the screen
+		const viewMinX = viewportCenter.x - viewportHalfSize.x;
+		
+		const viewMaxX = viewportCenter.x + viewportHalfSize.x;
+		
+		
+		if (player.position.x > viewMaxX) {
+			console.log("Wrapping BELOW")
+       	 	player.position.x = viewMinX;
+    	}
+		else if (player.position.x < viewMinX){
+			console.log("Wrapping ABOVE")
+			player.position.x = viewMinX;
+		}
 	}
 
 	public handleTimers(): void {
@@ -993,11 +1026,21 @@ export default class TYSScene extends Scene {
 		}
 		// If the game-over timer has run, change to the game-over scene
 		if (this.gameOverTimer.hasRun() && this.gameOverTimer.isStopped()) {
+			if (this.recording) {
+				
+				this.emitter.fireEvent(GameEventType.PLAY_RECORDING, {
+					onEnd:() => {
+						this.sceneManager.changeToScene(MainMenu, {}, {})
+					}
+				});
+			}
+			else{
 		 	this.sceneManager.changeToScene(GameOver, {
 				bubblesPopped: this.bubblesPopped, 
 				minesDestroyed: this.minesDestroyed,
 				timePassed: this.timePassed
 			}, {});
+			}
 		}
 	}
 

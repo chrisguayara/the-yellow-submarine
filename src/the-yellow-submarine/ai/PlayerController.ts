@@ -24,6 +24,7 @@ export const PlayerAnimations = {
 export default class PlayerController implements AI {
 	/** The GameNode that owns this PlayerController AI */
 	private owner: AnimatedSprite;
+	private isAlive: boolean;
 
     private currentHealth: number;
     private maxHealth: number;
@@ -92,6 +93,7 @@ export default class PlayerController implements AI {
 
         // Play the idle animation by default
 		this.owner.animation.play(PlayerAnimations.IDLE);
+		this.isAlive = true;
 	};
 	/**
 	 * Handles updates to the player 
@@ -119,10 +121,13 @@ export default class PlayerController implements AI {
 		}
 
         // If the player is out of hp - play the death animation
-		if (this.currentHealth <= this.minHealth) { 
+		if (this.currentHealth <= this.minHealth && this.isAlive){ 
+			console.log("DEAD , HEALTH", this.currentHealth);
             this.emitter.fireEvent(TYSEvents.DEAD);
-			this.owner.animation.play(PlayerAnimations.DEATH)
-            return;
+			this.owner.animation.play(PlayerAnimations.DEATH);
+			this.isAlive = false
+			
+            
         }
 		let newHealth = this.currentAir <= this.minAir ? MathUtils.clamp(this.currentHealth - deltaT*2, this.minHealth, this.maxHealth) : this.currentHealth;
 
@@ -136,36 +141,38 @@ export default class PlayerController implements AI {
 }
 
 		// Get the player's input direction 
-		let forwardAxis = (Input.isPressed(TYSControls.MOVE_UP) ? 1 : 0) + (Input.isPressed(TYSControls.MOVE_DOWN) ? -1 : 0);
-		let horizontalAxis = (Input.isPressed(TYSControls.MOVE_LEFT) ? -1 : 0) + (Input.isPressed(TYSControls.MOVE_RIGHT) ? 1 : 0);
+		if (this.isAlive) {
+			let forwardAxis = (Input.isPressed(TYSControls.MOVE_UP) ? 1 : 0) + (Input.isPressed(TYSControls.MOVE_DOWN) ? -1 : 0);
+			let horizontalAxis = (Input.isPressed(TYSControls.MOVE_LEFT) ? -1 : 0) + (Input.isPressed(TYSControls.MOVE_RIGHT) ? 1 : 0);
 
-		// Handle trying to shoot a laser from the submarine
-		if (Input.isMouseJustPressed() && this.currentCharge > 0) {
-			this.currentCharge -= 1;
-			this.emitter.fireEvent(TYSEvents.SHOOT_LASER, {src: this.owner.position});
-			this.emitter.fireEvent(TYSEvents.CHARGE_CHANGE, {curchrg: this.currentCharge, maxchrg: this.maxCharge});
+			// Handle trying to shoot a laser from the submarine
+			if (Input.isMouseJustPressed() && this.currentCharge > 0) {
+				this.currentCharge -= 1;
+				this.emitter.fireEvent(TYSEvents.SHOOT_LASER, {src: this.owner.position});
+				this.emitter.fireEvent(TYSEvents.CHARGE_CHANGE, {curchrg: this.currentCharge, maxchrg: this.maxCharge});
+			}
+
+			// Move the player
+			let movement = Vec2.UP.scaled(forwardAxis * this.currentSpeed).add(new Vec2(horizontalAxis * this.currentSpeed, 0));
+			this.owner.position.add(movement.scaled(deltaT));
+
+			// Player looses a little bit of air each frame
+			let newAir = MathUtils.clamp(this.currentAir - deltaT, this.minAir, this.maxAir);
+
+			if (Math.floor(newAir) !== Math.floor(this.currentAir)) {
+				this.currentAir = newAir;
+				this.emitter.fireEvent(TYSEvents.AIR_CHANGE, {
+					currAir: this.currentAir,
+					maxAir: this.maxAir
+				});
+			} else {
+				this.currentAir = newAir;
+			}
+
 		}
+		
 
-		// Move the player
-		let movement = Vec2.UP.scaled(forwardAxis * this.currentSpeed).add(new Vec2(horizontalAxis * this.currentSpeed, 0));
-		this.owner.position.add(movement.scaled(deltaT));
-
-		// Player looses a little bit of air each frame
-		let newAir = MathUtils.clamp(this.currentAir - deltaT, this.minAir, this.maxAir);
-
-		if (Math.floor(newAir) !== Math.floor(this.currentAir)) {
-			this.currentAir = newAir;
-			this.emitter.fireEvent(TYSEvents.AIR_CHANGE, {
-				currAir: this.currentAir,
-				maxAir: this.maxAir
-			});
-		} else {
-			this.currentAir = newAir;
-		}
-
-		// If the player is out of air - start subtracting from the player's health
-		this.currentHealth = this.currentAir <= this.minAir ? MathUtils.clamp(this.currentHealth - deltaT*2, this.minHealth, this.maxHealth) : this.currentHealth;
-
+		
 
 	}
 	/**
