@@ -164,6 +164,7 @@ export default class TYSScene extends Scene {
 		this.receiver.subscribe(TYSEvents.DEAD);
 		this.receiver.subscribe(TYSEvents.HEALTH_CHANGE);
 		this.receiver.subscribe(TYSEvents.AIR_CHANGE);
+		this.receiver.subscribe(TYSEvents.PLAYER_BUBBLE_COLLISION);
 
 		// Subscribe to laser events
 		this.receiver.subscribe(TYSEvents.FIRING_LASER);
@@ -238,6 +239,7 @@ export default class TYSScene extends Scene {
 			}
 			case TYSEvents.AIR_CHANGE: {
 				this.handleAirChange(event.data.get("currAir"), event.data.get("maxAir"));
+				break;
 			}
 			default: {
 				throw new Error(`Unhandled event with type ${event.type} caught in ${this.constructor.name}`);
@@ -542,7 +544,28 @@ export default class TYSScene extends Scene {
 	 * 							X THIS IS OUT OF BOUNDS
 	 */
 	protected spawnBubble(): void {
-		// TODO spawn bubbles!
+		
+		for (let i = 0; i < this.bubbles.length; i++) {
+			let bubble = this.bubbles[i];
+
+			if (!bubble.visible) {
+				
+				bubble.visible = true;
+
+				let viewportCenter = this.viewport.getCenter();
+				let viewportSize = this.viewport.getHalfSize().scaled(2);
+				let paddedSize = viewportSize.add(this.worldPadding);
+
+				let minX = viewportCenter.x - paddedSize.x / 2;
+				let maxX = viewportCenter.x + paddedSize.x / 2;
+				bubble.positionX = minX + RandUtils.random() * (maxX - minX);
+
+				let minY = viewportCenter.y + viewportSize.y / 2;
+				let maxY = viewportCenter.y + paddedSize.y / 2;
+				bubble.positionY = minY + RandUtils.random() * (maxY - minY);
+				break;
+			}
+		}
 	}
 	/**
 	 * This function takes in a GameNode that may be out of bounds of the viewport and
@@ -741,7 +764,15 @@ export default class TYSScene extends Scene {
 	 */
 	public handleBubblePlayerCollisions(): number {
 		// TODO check for collisions between the player and the bubbles
-        return;
+		let collisions = 0
+		for( let bubble of this.bubbles) {
+			if(bubble.visible && TYSScene.checkAABBtoCircleCollision(this.player.collisionShape as AABB,bubble.collisionShape as Circle)){
+				bubble.visible = false;
+				this.emitter.fireEvent(TYSEvents.PLAYER_BUBBLE_COLLISION)
+				collisions++;
+			}
+		}
+        return collisions;
 	}
 
 	/**
@@ -814,8 +845,22 @@ export default class TYSScene extends Scene {
 	 * @see MathUtils for more information about MathUtil functions
 	 */
 	public static checkAABBtoCircleCollision(aabb: AABB, circle: Circle): boolean {
-        // TODO implement collision detection for AABBs and Circles
-        return;
+        const circleCenter = circle.center;
+		const aabbCenter = aabb.center;
+
+		const halfWidth = aabb.halfSize.x;
+		const halfHeight = aabb.halfSize.y;
+
+		const x = MathUtils.clamp(circle.x, aabbCenter.x - halfWidth, aabbCenter.x + halfWidth)
+		const y = MathUtils.clamp(circle.y, aabbCenter.y - halfHeight, aabbCenter.y + halfHeight);
+
+		const dx = circleCenter.x - x;
+		const dy = circleCenter.y - y;
+
+		
+
+
+        return (dx * dy + dx * dy ) <= (circle.radius * circle.radius);
 	}
 
     /** Methods for locking and wrapping nodes */

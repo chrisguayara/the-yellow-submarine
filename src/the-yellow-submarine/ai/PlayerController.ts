@@ -28,7 +28,7 @@ export default class PlayerController implements AI {
     private currentHealth: number;
     private maxHealth: number;
     private minHealth: number;
-	private previousHealth: number;
+	
 
     private currentAir: number;
     private maxAir: number;
@@ -62,6 +62,8 @@ export default class PlayerController implements AI {
 		this.laserTimer = new Timer(2500, this.handleLaserTimerEnd, false);
 		
 		this.receiver.subscribe(TYSEvents.SHOOT_LASER);
+		this.receiver.subscribe(TYSEvents.PLAYER_MINE_COLLISION);
+		this.receiver.subscribe(TYSEvents.PLAYER_BUBBLE_COLLISION);
 
 		this.activate(options);
 	}
@@ -72,7 +74,7 @@ export default class PlayerController implements AI {
         // Set upper and lower bounds on the player's health
         this.minHealth = 0;
         this.maxHealth = 10;
-		this.previousHealth = this.currentHealth;
+		
 
         // Set the player's current air
         this.currentAir = 20;
@@ -122,11 +124,16 @@ export default class PlayerController implements AI {
 			this.owner.animation.play(PlayerAnimations.DEATH)
             return;
         }
-		if (this.currentHealth < this.previousHealth){
-			if (!this.owner.animation.isPlaying(PlayerAnimations.HIT)) {
-				this.owner.animation.play(PlayerAnimations.HIT);
-			}
-		}
+		let newHealth = this.currentAir <= this.minAir ? MathUtils.clamp(this.currentHealth - deltaT*2, this.minHealth, this.maxHealth) : this.currentHealth;
+
+
+		if (newHealth !== this.currentHealth) {
+			this.currentHealth = newHealth;
+			this.emitter.fireEvent(TYSEvents.HEALTH_CHANGE, {
+				currHealth: this.currentHealth,
+				maxHealth: this.maxHealth
+			});
+}
 
 		// Get the player's input direction 
 		let forwardAxis = (Input.isPressed(TYSControls.MOVE_UP) ? 1 : 0) + (Input.isPressed(TYSControls.MOVE_DOWN) ? -1 : 0);
@@ -144,19 +151,21 @@ export default class PlayerController implements AI {
 		this.owner.position.add(movement.scaled(deltaT));
 
 		// Player looses a little bit of air each frame
-		this.currentAir = MathUtils.clamp(this.currentAir - deltaT, this.minAir, this.maxAir);
+		let newAir = MathUtils.clamp(this.currentAir - deltaT, this.minAir, this.maxAir);
 
-		this.emitter.fireEvent(TYSEvents.AIR_CHANGE, {currAir: this.currentAir, maxAir: this.maxAir});
+		if (Math.floor(newAir) !== Math.floor(this.currentAir)) {
+			this.currentAir = newAir;
+			this.emitter.fireEvent(TYSEvents.AIR_CHANGE, {
+				currAir: this.currentAir,
+				maxAir: this.maxAir
+			});
+		} else {
+			this.currentAir = newAir;
+		}
 
 		// If the player is out of air - start subtracting from the player's health
 		this.currentHealth = this.currentAir <= this.minAir ? MathUtils.clamp(this.currentHealth - deltaT*2, this.minHealth, this.maxHealth) : this.currentHealth;
-		
-		
-		if (this.currentHealth < this.previousHealth) {
-			this.emitter.fireEvent(TYSEvents.HEALTH_CHANGE, {currHealth: this.currentHealth, maxHealth: this.maxHealth})
-		}
-		this.previousHealth = this.currentHealth;
-		
+
 
 	}
 	/**
@@ -171,6 +180,14 @@ export default class PlayerController implements AI {
 		switch(event.type) {
 			case TYSEvents.SHOOT_LASER: {
 				this.handleShootLaserEvent(event);
+				break;
+			}
+			case TYSEvents.PLAYER_MINE_COLLISION: { 
+				this.handleMineCollision(event);
+				break;
+			}
+			case TYSEvents.PLAYER_BUBBLE_COLLISION: {
+				this.handleBubbleCollision(event);
 				break;
 			}
 			
@@ -209,6 +226,19 @@ export default class PlayerController implements AI {
 		if (this.currentCharge < this.maxCharge) {
 			this.laserTimer.start();
 		}
+	}
+	protected handleMineCollision(event: GameEvent):void {
+		this.currentHealth = MathUtils.clamp(this.currentHealth-1, this.minHealth, this.maxHealth);
+		this.emitter.fireEvent(TYSEvents.HEALTH_CHANGE, {
+			currHealth: this.currentHealth, maxHealth: this.maxHealth
+		});
+
+	}
+	protected handleBubbleCollision(event : GameEvent) : void{
+		MathUtils.clamp(this.currentAir+1, this.minAir, this.maxAir);
+		this.emitter.fireEvent(TYSEvents.HEALTH_CHANGE, {
+			currAir: this.currentAir, maxAir: this.maxAir
+		}); 
 	}
 
 } 

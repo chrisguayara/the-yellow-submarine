@@ -9,6 +9,8 @@ export const TYSEvents = {
      */
 	PLAYER_MINE_COLLISION: "PLAYER_MINE_COLLISION", 
 
+    PLAYER_BUBBLE_COLLISION: "PLAYER_BUBBLE_COLLISION",
+
     /**
      * The event that gets emitted when the charge of the player's laser beam changes
      * 
@@ -43,8 +45,8 @@ export const TYSEvents = {
 
     MINE_EXPLODED: "MINE_EXPLODED",
     
-    HEALTH_CHANGE: "PLAYER_HEALTH_CHANGE",
+    HEALTH_CHANGE: "HEALTH_CHANGE",
     
-    AIR_CHANGE: "PLAYER_AIR_CHANGE"
+    AIR_CHANGE: "AIR_CHANGE"
     
 } as const;
